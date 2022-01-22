@@ -1,6 +1,6 @@
 /**
 The MIT License (MIT)
-Copyright © 2021 nyfrk@gmx.net
+Copyright © 2022 nyfrk@gmx.net
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the “Software”), to deal in 
@@ -34,10 +34,6 @@ using namespace std;
 #define PATTERN_CARRIER_ASSIGNMENT_TASK_GE  "EB 23 83 F8 0F 75 1E B9"          
 #define PATTERN_CARRIER_ASSIGNMENT_TASK_HE  "83 FE 0F 75 74 A1 ? ? ? ? 3D FE 00 00 00" 
 
-// CBuildingSiteRole Vfunc3 (building site role is creating a carry job)
-#define PATTERN_CARRIER_JOBCREATION_SITE_DELAY_GE "6A 01 56 FF 50 58 6A 0F 8B CE" // at +7
-#define PATTERN_CARRIER_JOBCREATION_SITE_DELAY_HE "FF 50 58 0F B7 43 08 50 6A 0F E8" // at 9
-
 // CDeliveryPileRole Vfunc10 (delivery pile role is creating a carry job)
 #define PATTERN_CARRIER_JOBCREATION_PROD_DELAY_GE "FF 50 3C 50 57 8B CB E8 ? ? ? ? 5F 5B 6A 1f 8B CE E8 ? ? ? ? 5E C2 04 00" // at +15
 #define PATTERN_CARRIER_JOBCREATION_PROD_DELAY_HE "5E 0F B7 43 08 50 6A 1F E8 ? ? ? ? 89 43 30" // at +7
@@ -55,14 +51,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	static struct {
 		unsigned
 			isCarrierAssignmentTaskPatch : 1,
-			isCarrierProdJobCreationPatch : 1,
-			isCarrierSiteJobCreationPatch : 1;
+			isCarrierProdJobCreationPatch : 1;
 	} AppliedPatches = { 0 };
 
 	static Patch 
 		CarrierAssignmentTaskPatch,
-		CarrierProdJobCreationPatch,
-		CarrierSiteJobCreationPatch;
+		CarrierProdJobCreationPatch;
 
 
     switch (ul_reason_for_call) {
@@ -74,12 +68,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 			StringPattern(isGE ? PATTERN_CARRIER_ASSIGNMENT_TASK_GE : PATTERN_CARRIER_ASSIGNMENT_TASK_HE));
 		const DWORD CarrierProdJobCreationPattern = (DWORD)FindPattern(hProcess, S4_Main,
 			StringPattern(isGE ? PATTERN_CARRIER_JOBCREATION_PROD_DELAY_GE : PATTERN_CARRIER_JOBCREATION_PROD_DELAY_HE));
-		const DWORD CarrierSiteJobCreationPattern = (DWORD)FindPattern(hProcess, S4_Main,
-			StringPattern(isGE ? PATTERN_CARRIER_JOBCREATION_SITE_DELAY_GE : PATTERN_CARRIER_JOBCREATION_SITE_DELAY_HE));
 
 		if (!CarrierAssignmentTaskPattern || 
-			!CarrierProdJobCreationPattern || 
-			!CarrierSiteJobCreationPattern) {
+			!CarrierProdJobCreationPattern) {
 			MessageBoxW(NULL,
 				L"Sorry, your game version is not supported by the CoalBug plugin. "
 				"Please open a ticket here: https://github.com/nyfrk/Settlers4-Coalfix/issues\n\n"
@@ -95,22 +86,18 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 			
 			CarrierAssignmentTaskPatch = Patch(CarrierAssignmentTaskPattern + (isGE ? 2 : 0), nop5, CarrierAssignmentTaskExpectedPattern, sizeof(nop5));
 			CarrierProdJobCreationPatch = Patch((DWORD)CarrierProdJobCreationPattern + (isGE ? 15 : 7), (BYTE)1, (BYTE)31);
-			CarrierSiteJobCreationPatch = Patch((DWORD)CarrierSiteJobCreationPattern + (isGE ? 7 : 9), (BYTE)1, (BYTE)15);
 
 			AppliedPatches.isCarrierAssignmentTaskPatch = true;
 			AppliedPatches.isCarrierProdJobCreationPatch = true;
-			AppliedPatches.isCarrierSiteJobCreationPatch = true;
 
 			CarrierAssignmentTaskPatch.patch(hProcess);
 			CarrierProdJobCreationPatch.patch(hProcess);
-			CarrierSiteJobCreationPatch.patch(hProcess);
 		}
 		break;
 	}
     case DLL_PROCESS_DETACH:
 		if (AppliedPatches.isCarrierAssignmentTaskPatch) CarrierAssignmentTaskPatch.unpatch(hProcess);
 		if (AppliedPatches.isCarrierProdJobCreationPatch) CarrierProdJobCreationPatch.unpatch(hProcess);
-		if (AppliedPatches.isCarrierSiteJobCreationPatch) CarrierSiteJobCreationPatch.unpatch(hProcess);
 		
         break;
     }

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Von Microsoft Visual C++ generierte Includedatei.
-// Verwendet durch Settlers4-Coalbug.rc
+// Verwendet durch Settlers4-CoalFix.rc
 //
 
 // Next default values for new objects
